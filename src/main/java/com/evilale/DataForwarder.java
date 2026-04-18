@@ -24,21 +24,18 @@ public final class DataForwarder implements Runnable {
 
     private final Socket source;
     private final Socket destination;
-    private final String direction;
-    private final String clientId;
+    private final String logPrefix;
     private final AtomicBoolean shutdownFlag;
     private final ForwarderConfig config;
 
     public DataForwarder(Socket source,
                          Socket destination,
-                         String direction,
-                         String clientId,
+                         String logPrefix,
                          AtomicBoolean shutdownFlag,
                          ForwarderConfig config) {
         this.source = source;
         this.destination = destination;
-        this.direction = direction;
-        this.clientId = clientId;
+        this.logPrefix = logPrefix;
         this.shutdownFlag = shutdownFlag;
         this.config = config;
     }
@@ -58,10 +55,10 @@ public final class DataForwarder implements Runnable {
                 forwardRaw(in, out, startTime);
             }
         } catch (IOException e) {
-            LOGGER.debug("[{}][{}] Socket error (broken connection): {}",
-                    clientId, direction, e.getMessage());
+            LOGGER.debug("{} Socket error (broken connection): {}",
+                    logPrefix, e.getMessage());
         } catch (RuntimeException e) {
-            LOGGER.error("[{}][{}] Unexpected error: {}", clientId, direction, e.getMessage(), e);
+            LOGGER.error("{} Unexpected error: {}", logPrefix, e.getMessage(), e);
         } finally {
             try {
                 if (!destination.isClosed() && !destination.isOutputShutdown()) {
@@ -76,8 +73,8 @@ public final class DataForwarder implements Runnable {
         final byte[] buffer = new byte[BUFFER_SIZE];
         while (!shutdownFlag.get()) {
             if (connectionTimeoutReached(startTime)) {
-                LOGGER.info("[{}][{}] Connection timeout reached ({}s)",
-                        clientId, direction, config.getTimeoutSeconds());
+                LOGGER.info("{} Connection timeout reached ({}s)",
+                        logPrefix, config.getTimeoutSeconds());
                 break;
             }
 
@@ -89,20 +86,20 @@ public final class DataForwarder implements Runnable {
             }
 
             if (n < 0) {
-                LOGGER.debug("[{}][{}] Connection closed (EOF)", clientId, direction);
+                LOGGER.debug("{} Connection closed (EOF)", logPrefix);
                 break;
             }
             if (n == 0) {
                 continue;
             }
 
-            LOGGER.info("[{}][{}] Received {} bytes", clientId, direction, n);
+            LOGGER.info("{} Received {} bytes", logPrefix, n);
             logPayload(buffer, n);
 
             out.write(buffer, 0, n);
             out.flush();
 
-            LOGGER.debug("[{}][{}] Forwarded {} bytes", clientId, direction, n);
+            LOGGER.debug("{} Forwarded {} bytes", logPrefix, n);
         }
     }
 
@@ -113,22 +110,22 @@ public final class DataForwarder implements Runnable {
 
         while (!shutdownFlag.get()) {
             if (connectionTimeoutReached(startTime)) {
-                LOGGER.info("[{}][{}] Connection timeout reached ({}s)",
-                        clientId, direction, config.getTimeoutSeconds());
+                LOGGER.info("{} Connection timeout reached ({}s)",
+                        logPrefix, config.getTimeoutSeconds());
                 break;
             }
 
             byte[] prefixBuffer = new byte[prefixSize];
             int read = readWithTimeout(in, prefixBuffer, 0, prefixSize, startTime);
             if (read < 0) {
-                LOGGER.debug("[{}][{}] Connection closed (EOF)", clientId, direction);
+                LOGGER.debug("{} Connection closed (EOF)", logPrefix);
                 break;
             }
             if (read == 0) {
                 continue;
             }
             if (read < prefixSize) {
-                LOGGER.warn("[{}][{}] Incomplete prefix received: {} bytes", clientId, direction, read);
+                LOGGER.warn("{} Incomplete prefix received: {} bytes", logPrefix, read);
                 break;
             }
 
@@ -136,7 +133,7 @@ public final class DataForwarder implements Runnable {
             int payloadSize = includesHeader ? length - prefixSize : length;
 
             if (payloadSize < 0 || payloadSize > 50 * 1024 * 1024) { // 50MB sanity check
-                LOGGER.warn("[{}][{}] Invalid payload size decoded: {}", clientId, direction, payloadSize);
+                LOGGER.warn("{} Invalid payload size decoded: {}", logPrefix, payloadSize);
                 break;
             }
 
@@ -145,11 +142,11 @@ public final class DataForwarder implements Runnable {
             if (payloadSize > 0) {
                 payloadRead = readWithTimeout(in, payloadBuffer, 0, payloadSize, startTime);
                 if (payloadRead < 0) {
-                    LOGGER.debug("[{}][{}] Connection closed (EOF) during payload read", clientId, direction);
+                    LOGGER.debug("{} Connection closed (EOF) during payload read", logPrefix);
                     break;
                 }
                 if (payloadRead < payloadSize) {
-                    LOGGER.warn("[{}][{}] Incomplete payload received: {}/{}", clientId, direction, payloadRead, payloadSize);
+                    LOGGER.warn("{} Incomplete payload received: {}/{}", logPrefix, payloadRead, payloadSize);
                     break;
                 }
             }
@@ -161,11 +158,11 @@ public final class DataForwarder implements Runnable {
                 System.arraycopy(payloadBuffer, 0, fullMessage, prefixSize, payloadSize);
             }
 
-            LOGGER.info("[{}][{}] Received message of {} bytes (payload {})", clientId, direction, totalSize, payloadSize);
+            LOGGER.info("{} Received message of {} bytes (payload {})", logPrefix, totalSize, payloadSize);
             logPayload(fullMessage, totalSize);
             out.write(fullMessage);
             out.flush();
-            LOGGER.debug("[{}][{}] Forwarded message of {} bytes", clientId, direction, totalSize);
+            LOGGER.debug("{} Forwarded message of {} bytes", logPrefix, totalSize);
         }
     }
 
@@ -216,14 +213,14 @@ public final class DataForwarder implements Runnable {
         if (!LOGGER.isDebugEnabled()) {
             return;
         }
-        LOGGER.debug("[{}][{}] Hex: {}", clientId, direction, toHex(buffer, length));
+        LOGGER.debug("{} Hex: {}", logPrefix, toHex(buffer, length));
 
         String text = new String(buffer, 0, length, StandardCharsets.UTF_8);
         if (!text.trim().isEmpty()) {
             String truncated = text.length() > TEXT_LOG_LIMIT
                     ? text.substring(0, TEXT_LOG_LIMIT)
                     : text;
-            LOGGER.debug("[{}][{}] Text: {}", clientId, direction, truncated);
+            LOGGER.debug("{} Text: {}", logPrefix, truncated);
         }
     }
 

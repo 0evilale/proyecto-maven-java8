@@ -50,12 +50,15 @@ public final class ClientHandler implements Runnable {
             LOGGER.info("Connected to remote server {}:{}",
                     config.getRemoteHost(), config.getRemotePort());
 
+            String clientPrefix = "[CLIENT " + clientId + " -> SERVER]";
+            String serverPrefix = "[SERVER -> CLIENT " + clientId + "]";
+
             DataForwarder clientToRemote = new DataForwarder(
-                    clientSocket, remoteSocket, "client->remote", clientId,
+                    clientSocket, remoteSocket, clientPrefix,
                     shutdownFlag, config);
 
             DataForwarder remoteToClient = new DataForwarder(
-                    remoteSocket, clientSocket, "remote->client", clientId,
+                    remoteSocket, clientSocket, serverPrefix,
                     shutdownFlag, config);
 
             Future<?> f1 = executor.submit(clientToRemote);

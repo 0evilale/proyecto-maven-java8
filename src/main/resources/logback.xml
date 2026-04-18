@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+    <!-- Timestamp captured at startup for the daily log file name -->
+    <timestamp key="byDay" datePattern="yyyy-MM-dd"/>
+
+    <!-- Shared pattern: matches the Python reference format
+         "%(asctime)s - %(levelname)s - %(message)s"  -->
+    <property name="LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss,SSS} - %-5level - %msg%n"/>
+
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>${LOG_PATTERN}</pattern>
+        </encoder>
+    </appender>
+
+    <appender name="FILE" class="ch.qos.logback.core.FileAppender">
+        <file>logs/forward_${byDay}.log</file>
+        <append>true</append>
+        <encoder>
+            <pattern>${LOG_PATTERN}</pattern>
+        </encoder>
+    </appender>
+
+    <root level="DEBUG">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE"/>
+    </root>
+
+</configuration>

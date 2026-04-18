@@ -34,6 +34,16 @@ java -jar target/tcp-forward.jar \
   --remote-port <REMOTE_PORT>
 ```
 
+### Usando un archivo de configuración
+
+Puedes evitar pasar todos los parámetros por línea de comandos usando un archivo de propiedades:
+
+```bash
+java -jar target/tcp-forward.jar --config config.properties
+```
+
+Se incluye un archivo de ejemplo en `src/main/resources/config.properties` que detalla todas las opciones, incluyendo la configuración para protocolos `length-prefixed`.
+
 ### Opciones
 
 | Flag | Default | Descripción |
@@ -43,6 +53,7 @@ java -jar target/tcp-forward.jar \
 | `--remote-host HOST` | — **(requerido)** | Host remoto al que reenviar |
 | `--remote-port PORT` | — **(requerido)** | Puerto remoto |
 | `--timeout SECONDS` | `0` | Duración máxima de conexión (0 = persistente, sin timeout) |
+| `--config FILE` | — | Ruta al archivo `.properties` con la configuración |
 | `-h`, `--help` | — | Muestra ayuda |
 
 ## Logs
